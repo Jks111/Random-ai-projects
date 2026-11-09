@@ -14,10 +14,38 @@ function commit(next) {
   try { localStorage.setItem(KEY, JSON.stringify(next)); hands = next; readable = true; render(); return true; }
   catch { message('Could not save. Browser storage may be full or blocked. Download a backup before closing.',true); return false; }
 }
+function percentage(part, total) {
+  return total ? (part / total * 100).toLocaleString(undefined, { maximumFractionDigits: 1 }) + '%' : '—';
+}
+function winRate(group) {
+  return percentage(group.filter(h=>h.result === 'win').length, group.length);
+}
+function renderRates() {
+  const flips = hands.filter(h=>h.category === 'coinflip');
+  const luck = hands.filter(h=>h.category !== 'coinflip');
+  $('win-rates').replaceChildren();
+  for (const [label, group] of [['All hands',hands],['Coinflips',flips],['Tuuritukset',luck]]) {
+    const tr = document.createElement('tr');
+    const groups = [group,group.filter(h=>h.matter),group.filter(h=>!h.matter)];
+    const title = document.createElement('th');title.scope='row';title.textContent=label;tr.append(title);
+    for (const sample of groups) {
+      const td = document.createElement('td');
+      const value = document.createElement('strong');value.textContent=winRate(sample);
+      const count = document.createElement('small');count.textContent=sample.filter(h=>h.result==='win').length+' / '+sample.length+' won';
+      td.append(value,count);tr.append(td);
+    }
+    $('win-rates').append(tr);
+  }
+  const luckyWins = luck.filter(h=>h.category === 'tuuritin').length;
+  $('luck-win-share').textContent=percentage(luckyWins,luck.length);
+  $('luck-loss-share').textContent=percentage(luck.length-luckyWins,luck.length);
+  $('luck-sample').textContent=luck.length+' tuuritukset recorded';
+}
 function render() {
   $('total').textContent = hands.length;
-  $('rate').textContent = hands.length ? Math.round(hands.filter(h=>h.result === 'win').length / hands.length * 100) + '%' : '—';
+  $('rate').textContent = winRate(hands);
   $('mattered').textContent = hands.filter(h=>h.matter).length;
+  renderRates();
   $('scoreboard').replaceChildren();
   for (const [key,name] of Object.entries(names)) {
     const group = hands.filter(h=>h.category === key);
